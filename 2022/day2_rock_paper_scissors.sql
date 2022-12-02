@@ -1,3 +1,5 @@
+-- https://adventofcode.com/2022/day/2
+
 create table rps(opponent char, you char);
 \copy rps (opponent, you) from 'day2_input' with delimiter ' ';
 
