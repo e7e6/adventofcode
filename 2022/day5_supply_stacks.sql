@@ -1,4 +1,5 @@
 -- https://adventofcode.com/2022/day/5
+
 DROP TABLE IF EXISTS mouvements;
 DROP TABLE IF EXISTS crates_staging;
 DROP TABLE IF EXISTS crates;
@@ -20,22 +21,25 @@ CREATE TABLE crates_staging (
 -- But it's short and easy
 \copy mouvements(n, source, destination) from program 'sed -n "/move/p" day5.input | sed "s/move //g;s/from //g ; s/to //g"' with delimiter ' '
 \copy crates_staging(stack) from program 'sed -n "/\[/p" day5.input | cut -c 2,6,10,14,18,22,26,30,34,38'
-
--- rotate the data for easier manipulation...incorrectly  (should be corrected later)
+-- rotate the data for easier manipulation... the weird way
 -- we reverse the stack so the bottom is on the left
-CREATE TABLE crates AS
+CREATE TABLE crates2 AS
 SELECT
-    c.id,
+    id,
     reverse(ltrim(rotated, ' ')) AS stack
-FROM
-    crates_staging c,
-    LATERAL (
-        SELECT string_agg(substr(d.stack, c.id, 1), '') AS rotated
-        FROM crates_staging d) e
-ORDER BY id;
-
--- very cheapo correction
-INSERT INTO crates (id, stack) VALUES (9, 'LSG');
+FROM (
+    SELECT
+        i AS id,
+        (
+            SELECT
+                string_agg(substr(stack, i, 1), '' ORDER BY id) AS rotated
+            FROM
+                crates_staging)
+        FROM
+            generate_series(1, (
+                    SELECT
+                        max(length(stack))
+                    FROM crates_staging)) i) s;
 
 -- we define a little function that will move the crates
 -- from stack to stack
@@ -46,22 +50,33 @@ CREATE OR REPLACE FUNCTION public.operate (n_crates integer, source integer, des
 DECLARE
     crates_to_move text;
 BEGIN
-    SELECT RIGHT (stack, n_crates) INTO crates_to_move
-    FROM crates
-    WHERE id = source;
-
-    UPDATE crates
-    SET stack = LEFT (stack, length(stack) - n_crates)
-    WHERE id = source;
-
-    UPDATE crates
-    SET stack = stack || reverse(crates_to_move)
+    SELECT
+    RIGHT (stack,
+        n_crates) INTO crates_to_move
+FROM
+    crates
+WHERE
+    id = source;
+    UPDATE
+        crates
+    SET
+        stack =
+    LEFT (stack,
+        length(stack) - n_crates)
+WHERE
+    id = source;
+    UPDATE
+        crates
+    SET
+        stack = stack || reverse(crates_to_move)
         -- set stack = stack || crates_to_move
-
-    WHERE id = destination;
+    WHERE
+        id = destination;
     RAISE NOTICE 'Moving % from % to %.', crates_to_move, source, destination;
 END;
 $function$;
+
+-- ye olde iterative way
 
 DO $$
     << myblock >>
@@ -98,9 +113,12 @@ SELECT
     string_agg(
     RIGHT (stack, 1), '')
 FROM (
-    SELECT *
-    FROM crates
-    ORDER BY id) c;
+    SELECT
+        *
+    FROM
+        crates
+    ORDER BY
+        id) c;
 
 -------------------------------------------------------
 -- SECOND PART
