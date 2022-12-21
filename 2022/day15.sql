@@ -1,14 +1,13 @@
 drop table if exists input;
 create table input(id integer generated always as identity, line text);
 
+-- test data
 --\copy input (line) from 'day15_test.input'
 \copy input (line) from 'day15.input'
 
 -------------------------------------------------------
--- FIRST PART... 
--- Incorrect, because i take a wrong range
+-- FIRST PART
 -------------------------------------------------------
---4408541 to low
 
 with dataprep as
 (
@@ -19,10 +18,11 @@ with dataprep as
                (regexp_replace(line, 'Sensor at x=(-?[0-9]+), y=(-?[0-9]+): closest beacon is at x=(-?[0-9]+), y=(-?[0-9]+)', '\4'))::int as y_beacon
         from input
 ) ,
-range as
+range as 
+-- quite inneficient as we add the biggest manhattan distance to the smallest and biggest x coordinates we know
 (
-        select least(MIN(x_sensor), MIN(x_beacon)) as minx,
-               greatest(MAX(x_sensor), MAX(x_beacon)) as maxx
+        select least(MIN(x_sensor), MIN(x_beacon)) - max(abs(x_beacon - x_sensor) + abs(y_beacon - y_sensor)) as minx,
+               greatest(MAX(x_sensor), MAX(x_beacon)) + max(abs(x_beacon - x_sensor) + abs(y_beacon - y_sensor)) as maxx
         from dataprep
 )
 ,
