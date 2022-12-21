@@ -6,7 +6,7 @@ create table input(id integer generated always as identity, line text);
 
 -------------------------------------------------------
 -- FIRST PART... 
--- Incorrect, but I so far fail to understand why
+-- Incorrect, because i take a wrong range
 -------------------------------------------------------
 --4408541 to low
 
